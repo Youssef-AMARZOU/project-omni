@@ -1,0 +1,50 @@
+.env
+.env.local
+.env.production
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+*.sqlite
+*.db
+*.db-journal
+.ipynb_checkpoints/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Data & volumes
+data/
+hf_upload/
+*.tar.gz
+*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.crt
