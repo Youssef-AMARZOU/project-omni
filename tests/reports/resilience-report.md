@@ -122,4 +122,4 @@ python -m pytest tests/test_resilience.py::TestResilience::test_llm_fallback_ope
 
 ---
 
-*Ce rapport est généré automatiquement par le pipeline CI/CD. Pour toute question, contacter engineering@entreprise.com.*
+*Ce rapport est généré automatiquement par le pipeline CI/CD. Pour toute question, contacter youssef.amarzou@yahoo.com — Youssef AMARZOU.*

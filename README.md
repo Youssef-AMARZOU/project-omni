@@ -1,3 +1,14 @@
+---
+title: Project OMNI
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+sdk_version: "3.11"
+app_file: src/main.py
+pinned: false
+---
+
 # OMNI Enterprise - Multi-Agent ETL Orchestration Engine
 
 > **Project OMNI** — Système Multi-Agents d'Orchestration et d'Optimisation des Opérations
@@ -69,7 +80,7 @@ Project OMNI est une plateforme d'orchestration de données d'entreprise conçue
 
 ```bash
 # 1. Clone
-git clone https://github.com/entreprise/project-omni.git
+git clone https://github.com/Youssef-AMARZOU/project-omni.git
 cd project-omni-enterprise
 
 # 2. Configuration
@@ -235,11 +246,21 @@ python -m pytest tests/test_resilience.py -v
 
 ---
 
-## 9. Licence & Gouvernance
+## 9. Plateformes
 
-**Licence** : Propriétaire / Entreprise — Tous droits réservés.
+| Plateforme | Lien |
+|-----------|------|
+| GitHub | https://github.com/Youssef-AMARZOU/project-omni |
+| GitLab | https://gitlab.com/Youssef-AMARZOU/project-omni |
+| HuggingFace | https://huggingface.co/spaces/YsfMO98/YsfMO98 |
+| Jira | https://syoussefama.atlassian.net/browse/INGBI |
+| Notion | Project OMNI v2.0 |
 
-**Contact** : engineering@entreprise.com
+---
+
+## 10. Gouvernance
+
+**Contact** : youssef.amarzou@yahoo.com — Youssef AMARZOU
 
 ---
 

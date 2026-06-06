@@ -101,7 +101,7 @@ GITHUB_REPO_OWNER=VOTRE-USERNAME
 GITHUB_REPO_NAME=project-omni
 
 # GitLab (déjà configuré)
-GITLAB_TOKEN=glpat-YXQDeEeG1NXNNp0ds0zUy2M6MQpvOjEKdTpuNG03dQ8.01.171wuhkbq
+GITLAB_TOKEN=$gitlab_token
 GITLAB_PROJECT_ID=82950759
 GITLAB_URL=https://gitlab.com
 
@@ -183,4 +183,4 @@ if ($confirm -eq "O" -or $confirm -eq "o" -or $confirm -eq "") {
 
 Show-Title "TERMINE"
 Write-Host "`nMerci d'avoir configuré Project OMNI !" -ForegroundColor Green
-Write-Host "Pour toute question : engineering@entreprise.com" -ForegroundColor DarkGray
+Write-Host "Pour toute question : youssef.amarzou@yahoo.com — Youssef AMARZOU" -ForegroundColor DarkGray

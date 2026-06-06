@@ -1,9 +1,16 @@
 import os
 from functools import lru_cache
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     """Configuration centralisée via Pydantic Settings."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # LLM
     openai_api_key: str = ""
@@ -50,9 +57,6 @@ class Settings(BaseSettings):
     hf_repo_id: str = ""
     hf_private: bool = False
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 @lru_cache()
 def get_settings() -> Settings:

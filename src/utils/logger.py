@@ -1,14 +1,12 @@
 import json
 import sys
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import structlog
-from pymongo import MongoClient
 from src.utils.config import get_settings
 
 settings = get_settings()
 
-# ─── Shared Processors ──────────────────────────────────────────────────
 shared_processors = [
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.processors.add_log_level,
@@ -20,7 +18,6 @@ shared_processors = [
     structlog.processors.format_exc_info,
 ]
 
-# ─── JSON Renderer (stdout) ─────────────────────────────────────────────
 structlog.configure(
     processors=shared_processors + [structlog.processors.JSONRenderer()],
     wrapper_class=structlog.make_filtering_bound_logger(
@@ -30,33 +27,45 @@ structlog.configure(
     logger_factory=structlog.PrintLoggerFactory(),
 )
 
-# ─── MongoDB Backend ────────────────────────────────────────────────────
-class MongoLogHandler:
-    """Handler persistant vers MongoDB pour audit complet."""
+_mongo_handler: Optional["MongoLogHandler"] = None
 
+def _get_mongo_handler():
+    global _mongo_handler
+    if _mongo_handler is None:
+        try:
+            _mongo_handler = MongoLogHandler()
+        except Exception:
+            pass
+    return _mongo_handler
+
+
+class MongoLogHandler:
     def __init__(self):
-        self.client = MongoClient(settings.mongo_url)
-        self.db = self.client.get_default_database()
-        self.collection = self.db["omni_audit_logs"]
+        try:
+            from pymongo import MongoClient
+            self.client = MongoClient(settings.mongo_url, serverSelectionTimeoutMS=5000)
+            self.db = self.client.get_default_database()
+            self.collection = self.db["omni_audit_logs"]
+        except Exception:
+            self.client = None
+            self.collection = None
 
     def write(self, record: Dict[str, Any]):
-        record["timestamp"] = datetime.now(timezone.utc)
-        self.collection.insert_one(record)
+        if self.collection is None:
+            return
+        try:
+            record_copy = dict(record)
+            record_copy["timestamp"] = datetime.now(timezone.utc).isoformat()
+            self.collection.insert_one(record_copy)
+        except Exception:
+            pass
 
-_mongo_handler = MongoLogHandler()
 
-# ─── Logger Factory ─────────────────────────────────────────────────────
 def get_logger(name: str) -> structlog.BoundLogger:
-    """Retourne un logger structuré avec préfixe OMNI."""
-    logger = structlog.get_logger(f"omni.{name}")
-    return logger
+    return structlog.get_logger(f"omni.{name}")
+
 
 class AuditLogger:
-    """
-    Logger d'audit pour les décisions IA.
-    Stocke : entrée brute, prompt, sortie, confiance.
-    """
-
     @staticmethod
     def log_agent_decision(
         agent_name: str,
@@ -73,7 +82,12 @@ class AuditLogger:
             "prompt": prompt,
             "output": output,
             "confidence": confidence,
-            "model_used": output.get("model", "unknown"),
+            "model_used": output.get("model", "unknown") if isinstance(output, dict) else "unknown",
         }
-        _mongo_handler.write(entry)
+        handler = _get_mongo_handler()
+        if handler:
+            try:
+                handler.write(entry)
+            except Exception:
+                pass
         get_logger("audit").info("agent_decision", **entry)

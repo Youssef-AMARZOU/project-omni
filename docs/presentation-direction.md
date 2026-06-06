@@ -213,8 +213,8 @@ curl http://localhost:8000   # Agents
 
 ## Merci
 
-**Contact** : engineering@entreprise.com
-**Repository** : `github.com/entreprise/project-omni`
+**Contact** : youssef.amarzou@yahoo.com — Youssef AMARZOU
+**Repository** : `github.com/Youssef-AMARZOU/project-omni`
 
 *Built with intelligence. Powered by agents. Orchestrated by OMNI.*
 

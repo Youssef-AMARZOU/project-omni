@@ -363,7 +363,7 @@ def build_slides():
     story.append(Paragraph("Merci", slide_title))
     story.append(Paragraph("Questions & Discussion", slide_subtitle))
     story.append(Spacer(1, 1*cm))
-    story.append(Paragraph("engineering@entreprise.com", slide_body))
+    story.append(Paragraph("youssef.amarzou@yahoo.com — Youssef AMARZOU", slide_body))
     story.append(Paragraph("github.com/entreprise/project-omni", slide_small))
     story.append(Spacer(1, 1*cm))
     story.append(Paragraph("<i>Built with intelligence. Powered by agents. Orchestrated by OMNI.</i>", slide_small))

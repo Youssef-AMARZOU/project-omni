@@ -38,7 +38,7 @@ This is the official dataset and documentation repository for **Project OMNI**, 
 
 ```bash
 # Clone the dataset
-git clone https://huggingface.co/datasets/entreprise/project-omni
+git clone https://huggingface.co/spaces/YsfMO98/YsfMO98
 
 # Read the docs
 cat docs/architecture.md
@@ -53,15 +53,15 @@ pytest tests/
 ```bibtex
 @software{omni2026,
   title = {Project OMNI: Multi-Agent ETL Orchestration Engine},
-  author = {OMNI Engineering Team},
+  author = {Youssef AMARZOU},
   year = {2026},
-  url = {https://huggingface.co/datasets/entreprise/project-omni}
+  url = {https://huggingface.co/spaces/YsfMO98/YsfMO98}
 }
 ```
 
-## License
+## Contact
 
-MIT — Enterprise use permitted. Attribution appreciated.
+**Contact** : youssef.amarzou@yahoo.com — Youssef AMARZOU
 
 ---
 
