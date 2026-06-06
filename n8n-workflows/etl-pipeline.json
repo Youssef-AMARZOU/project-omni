@@ -1,0 +1,120 @@
+{
+  "name": "OMNI - ETL Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "queue": "omni_standard_queue"
+      },
+      "name": "RabbitMQ Consumer",
+      "type": "n8n-nodes-base.rabbitmqTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "credentials": {
+        "rabbitmq": "rabbitmq_default"
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://omni-agents:8000/extract",
+        "method": "POST",
+        "body": {
+          "raw": "={{ $json }}"
+        }
+      },
+      "name": "Agent Extractor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://omni-agents:8000/plan",
+        "method": "POST",
+        "body": {
+          "raw": "={{ $json }}"
+        }
+      },
+      "name": "Agent Planner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://omni-agents:8000/validate",
+        "method": "POST",
+        "body": {
+          "raw": "={{ $json }}"
+        }
+      },
+      "name": "Agent Validator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO omni_tasks (task_id, status, plan) VALUES ('{{ $json.task_id }}', '{{ $json.status }}', '{{ $json.plan }}')"
+      },
+      "name": "Write PostgreSQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [1050, 300],
+      "credentials": {
+        "postgres": "postgres_default"
+      }
+    }
+  ],
+  "connections": {
+    "RabbitMQ Consumer": {
+      "main": [
+        [
+          {
+            "node": "Agent Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Extractor": {
+      "main": [
+        [
+          {
+            "node": "Agent Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Planner": {
+      "main": [
+        [
+          {
+            "node": "Agent Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Validator": {
+      "main": [
+        [
+          {
+            "node": "Write PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "error-handling"
+  },
+  "tags": ["omni", "etl", "pipeline"]
+}

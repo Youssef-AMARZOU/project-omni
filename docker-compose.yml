@@ -1,0 +1,201 @@
+version: "3.8"
+
+services:
+  # ───────────────────────────────────────────
+  # ORCHESTRATOR : n8n
+  # ───────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: omni-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Europe/Paris
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-omni_n8n}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-omni}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-omni_password}
+      - EXECUTIONS_MODE=queue
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-workflows:/backup/workflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omni-network
+
+  # ───────────────────────────────────────────
+  # POSTGRESQL : Données structurées + n8n
+  # ───────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: omni-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-omni}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-omni_password}
+      - POSTGRES_DB=${POSTGRES_DB:-omni_n8n}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - omni-network
+
+  # ───────────────────────────────────────────
+  # QDRANT : Base de données vectorielle (RAG)
+  # ───────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: omni-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - omni-network
+
+  # ───────────────────────────────────────────
+  # MONGODB : Logs et données non-structurées
+  # ───────────────────────────────────────────
+  mongodb:
+    image: mongo:7-jammy
+    container_name: omni-mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-omni}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-omni_password}
+      - MONGO_INITDB_DATABASE=${MONGO_DB:-omni_logs}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - omni-network
+
+  # ───────────────────────────────────────────
+  # REDIS : Queue & Cache
+  # ───────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: omni-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - omni-network
+
+  # ───────────────────────────────────────────
+  # PYTHON AGENTS : Extraction, Planification, Validation
+  # ───────────────────────────────────────────
+  omni-agents:
+    build:
+      context: ./src
+      dockerfile: ../docker/Dockerfile.agents
+    container_name: omni-agents
+    restart: unless-stopped
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - POSTGRES_DSN=postgresql://${POSTGRES_USER:-omni}:${POSTGRES_PASSWORD:-omni_password}@postgres:5432/${POSTGRES_DB:-omni_n8n}
+      - QDRANT_URL=http://qdrant:6333
+      - MONGO_URL=mongodb://${MONGO_USER:-omni}:${MONGO_PASSWORD:-omni_password}@mongodb:27017/${MONGO_DB:-omni_logs}?authSource=admin
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - FALLBACK_LLM_PROVIDER=${FALLBACK_LLM_PROVIDER:-anthropic}
+      - CIRCUIT_BREAKER_THRESHOLD=${CIRCUIT_BREAKER_THRESHOLD:-5}
+      - CIRCUIT_BREAKER_TIMEOUT=${CIRCUIT_BREAKER_TIMEOUT:-60}
+    volumes:
+      - ./src:/app:ro
+      - ./data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omni-network
+    command: ["python", "-m", "main"]
+
+  # ───────────────────────────────────────────
+  # RABBITMQ : Event Bus (optionnel pour Kafka)
+  # ───────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: omni-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-omni}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-omni_password}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - omni-network
+
+volumes:
+  n8n_data:
+  postgres_data:
+  qdrant_data:
+  mongodb_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  omni-network:
+    driver: bridge

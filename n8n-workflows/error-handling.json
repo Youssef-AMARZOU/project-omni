@@ -1,0 +1,138 @@
+{
+  "name": "OMNI - Error Handling & Fallback",
+  "nodes": [
+    {
+      "parameters": {
+        "event": "n8n.workflow.failed"
+      },
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "rate-limit",
+              "leftValue": "={{ $json.error.message }}",
+              "rightValue": "429",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "server-error",
+              "leftValue": "={{ $json.error.message }}",
+              "rightValue": "500",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "timeout",
+              "leftValue": "={{ $json.error.message }}",
+              "rightValue": "timeout",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        }
+      },
+      "name": "API Error Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "content": "={{ $json.error.message }}"
+      },
+      "name": "Fallback to Anthropic",
+      "type": "n8n-nodes-base.anthropic",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "anthropicApi": "anthropic_api"
+      }
+    },
+    {
+      "parameters": {
+        "subject": "OMNI - Fallback LLM Activé",
+        "message": "={{ $json.error.message }}"
+      },
+      "name": "Notify Monitoring",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://omni-agents:8000/health",
+        "method": "GET"
+      },
+      "name": "Health Check",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 500]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "API Error Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Error Filter": {
+      "main": [
+        [
+          {
+            "node": "Fallback to Anthropic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Health Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback to Anthropic": {
+      "main": [
+        [
+          {
+            "node": "Notify Monitoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["omni", "error", "fallback", "resilience"]
+}

@@ -1,0 +1,134 @@
+{
+  "name": "OMNI - Semantic Router",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "omni-ingress"
+    },
+    {
+      "parameters": {
+        "options": {},
+        "content": "={{ $json.body }}"
+      },
+      "name": "LLM Classifier",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "openAiApi": "openai_api"
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "value": "critical",
+              "output": 0
+            },
+            {
+              "value": "standard",
+              "output": 1
+            },
+            {
+              "value": "complex",
+              "output": 2
+            }
+          ]
+        }
+      },
+      "name": "Switch Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "subject": "ALERTE CRITIQUE OMNI",
+        "message": "={{ $json.body }}"
+      },
+      "name": "Alert Critical",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [850, 150]
+    },
+    {
+      "parameters": {
+        "queue": "omni_standard_queue"
+      },
+      "name": "Queue Standard",
+      "type": "n8n-nodes-base.rabbitmq",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "rabbitmq": "rabbitmq_default"
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": "etl-enrichment-pipeline"
+      },
+      "name": "Trigger Enrichment",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [850, 450]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "LLM Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Classifier": {
+      "main": [
+        [
+          {
+            "node": "Switch Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Router": {
+      "main": [
+        [
+          {
+            "node": "Alert Critical",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Queue Standard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trigger Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["omni", "router", "semantic"]
+}
